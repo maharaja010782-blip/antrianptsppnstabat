@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Antrian PTSP PN Stabat</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --bg:#f4f6f8; --card:#ffffff; --text:#1a1d23; --muted:#6b7280; --border:#e2e5e9;
+  --accent:#1e4d8c; --accent2:#0f9d58; --danger:#c0392b; --warn:#e08e0b;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#14171c; --card:#1d2128; --text:#eef1f5; --muted:#9aa3ad; --border:#2a2f37;
+    --accent:#5b8fd6; --accent2:#3ddc84; --danger:#e57368; --warn:#f0b74d;
+  }
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{position:sticky;top:0;top:env(safe-area-inset-top,0px);background:var(--card);border-bottom:1px solid var(--border);padding:10px 14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;z-index:5}
+header h1{font-size:15px;margin:0;flex:1;min-width:160px}
+nav{display:flex;gap:6px;flex-wrap:wrap}
+nav button{padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);cursor:pointer;font-size:13px}
+nav button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+main{padding:16px;max-width:1100px;margin:0 auto}
+.banner{background:var(--warn);color:#1a1d23;padding:10px 14px;border-radius:8px;margin-bottom:14px;font-size:13px}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px}
+.card h3{margin:0 0 6px;font-size:15px}
+.card .prefix{color:var(--muted);font-size:12px;margin-bottom:10px}
+.take-btn{width:100%;padding:14px;border:none;border-radius:10px;background:var(--accent);color:#fff;font-size:15px;font-weight:600;cursor:pointer}
+.ticket{max-width:340px;margin:30px auto;text-align:center;background:var(--card);border:2px dashed var(--accent);border-radius:14px;padding:26px}
+.ticket .num{font-size:56px;font-weight:800;color:var(--accent);letter-spacing:1px}
+.ticket .loket{font-size:16px;color:var(--muted);margin-top:6px}
+select{padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:14px;width:100%;max-width:320px}
+.petugas-panel{max-width:420px;margin:0 auto;text-align:center}
+.calling-num{font-size:64px;font-weight:800;color:var(--accent2);margin:16px 0}
+.waiting-count{color:var(--muted);font-size:14px;margin-bottom:16px}
+.btnrow{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:10px}
+.btnrow button{padding:12px 18px;border-radius:10px;border:none;font-size:14px;font-weight:600;cursor:pointer;color:#fff}
+.btn-call{background:var(--accent2)}
+.btn-done{background:var(--accent)}
+.btn-repeat{background:var(--muted)}
+.btn-reset{background:var(--danger);margin-top:24px}
+.print-btn{margin-top:14px;padding:10px 18px;border:none;border-radius:8px;background:var(--accent2);color:#fff;font-weight:600;cursor:pointer}
+.print-area{display:none}
+@media print{
+  body *{visibility:hidden}
+  .print-area, .print-area *{visibility:visible}
+  .print-area{display:block;position:fixed;top:0;left:0;width:80mm;padding:4mm;font-family:monospace;color:#000}
+  .print-area .pnum{font-size:32pt;font-weight:800;text-align:center;margin:6mm 0}
+  .print-area .ploket{font-size:11pt;text-align:center}
+  .print-area .pfoot{font-size:8pt;text-align:center;margin-top:6mm}
+  @page{size:80mm auto;margin:0}
+}
+.tv{background:#0b1220;color:#eef2f8;min-height:100vh;padding:24px 28px;font-family:system-ui,sans-serif}
+.tv-header{display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #24314d;padding-bottom:16px;margin-bottom:20px}
+.tv-title h2{margin:0;font-size:22px;letter-spacing:.5px;font-weight:700}
+.tv-title p{margin:4px 0 0;color:#8ea2c6;font-size:13px;letter-spacing:1px;text-transform:uppercase}
+.tv-clock{text-align:right;color:#8ea2c6;font-size:16px}
+.tv-highlight{background:linear-gradient(135deg,#1e4d8c,#123061);border-radius:16px;padding:22px 28px;margin-bottom:22px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 6px 20px rgba(0,0,0,.35)}
+.tv-highlight .label{color:#bcd0f5;font-size:13px;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px}
+.tv-highlight .num{font-size:64px;font-weight:800;color:#fff;letter-spacing:2px}
+.tv-highlight .loketname{font-size:20px;color:#dce8ff;font-weight:600}
+.tv-grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.tv-card{background:#141d33;border:1px solid #24314d;border-radius:14px;padding:18px;text-align:center;position:relative;overflow:hidden}
+.tv-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:#3ddc84}
+.tv-card h3{margin:2px 0 10px;font-size:14px;color:#a9b9d8;font-weight:600;letter-spacing:.5px}
+.tv-card .callnum{font-size:40px;font-weight:800;color:#fff;min-height:48px;font-variant-numeric:tabular-nums}
+.tv-card .callnum.empty{color:#4a5878;font-size:26px}
+.tv-card .next{color:#8ea2c6;font-size:12px;margin-top:10px;border-top:1px solid #24314d;padding-top:8px}
+.tv-pulse{animation:tvpulse 1.4s ease-in-out 2}
+@keyframes tvpulse{0%,100%{box-shadow:0 0 0 0 rgba(61,220,132,.5)}50%{box-shadow:0 0 0 10px rgba(61,220,132,0)}}
+.tv-footer{text-align:center;color:#5c6b8c;font-size:12px;margin-top:22px}
+.tv-marquee{margin-top:18px;background:#141d33;border:1px solid #24314d;border-radius:10px;overflow:hidden;padding:10px 0;position:relative}
+.tv-marquee-track{display:inline-block;white-space:nowrap;padding-left:100%;animation:tvmarquee 32s linear infinite;font-size:15px;color:#dce8ff;letter-spacing:.3px}
+.tv-marquee-track span{margin-right:60px}
+@keyframes tvmarquee{0%{transform:translateX(0)}100%{transform:translateX(-100%)}}
+</style>
+</head>
+<body>
+<header>
+  <h1>🎫 Antrian PTSP PN Stabat</h1>
+  <nav id="nav">
+    <button data-v="kiosk">Ambil Nomor</button>
+    <button data-v="petugas">Petugas</button>
+    <button data-v="display">Layar Display</button>
+  </nav>
+</header>
+<main id="main"></main>
+
+<script>
+// ==== ISI DENGAN KREDENSIAL SUPABASE PROJECT SIKES KAMU ====
+const SUPABASE_URL = 'https://xxxxxxxxxxxx.supabase.co';
+const SUPABASE_ANON_KEY = 'PASTE_ANON_PUBLIC_KEY_DI_SINI';
+// =============================================================
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const LOKET = [
+  {id:'pidana', name:'Layanan Pidana', prefix:'A'},
+  {id:'perdata', name:'Layanan Perdata', prefix:'B'},
+  {id:'hukum', name:'Hukum', prefix:'C'},
+  {id:'umum', name:'Layanan Umum', prefix:'D'},
+  {id:'posbakum', name:'Posbakum', prefix:'P'},
+  {id:'ecourt', name:'E-Court Corner', prefix:'E'},
+  {id:'inzage', name:'Inzage', prefix:'I'},
+];
+
+let data = null; // {loket:{id:{calling,waiting:[]}}}
+let view = localStorage.getItem('antrian_view') || 'kiosk';
+let petugasLoket = localStorage.getItem('antrian_petugas_loket') || LOKET[0].id;
+let currentTicket = null;
+let latestCall = null;
+let soundUnlocked = false;
+let resetArmed = false;
+let loadError = '';
+
+function showToast(msg){
+  let t = document.getElementById('toast');
+  if(!t){
+    t = document.createElement('div'); t.id='toast';
+    t.style.cssText='position:fixed;bottom:calc(16px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:#1a1d23;color:#fff;padding:10px 16px;border-radius:8px;font-size:13px;z-index:50;max-width:90%;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,.3)';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg; t.style.display='block';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=>{ t.style.display='none'; }, 4500);
+}
+function speak(nomor, loketName){
+  try{
+    const spokenName = loketName.startsWith('Layanan') ? loketName : 'Layanan ' + loketName;
+    const u = new SpeechSynthesisUtterance('Nomor antrian ' + nomor.split('').join(' ') + ', silakan menuju ' + spokenName);
+    u.lang = 'id-ID';
+    speechSynthesis.cancel();
+    speechSynthesis.speak(u);
+  }catch(e){}
+}
+function unlockSound(){
+  try{
+    const u = new SpeechSynthesisUtterance(' '); u.volume=0;
+    speechSynthesis.speak(u); soundUnlocked=true;
+    showToast('Suara diaktifkan.'); render();
+  }catch(e){}
+}
+
+async function fetchState(){
+  const { data: tickets, error } = await supabase
+    .from('ptsp_tickets').select('*').in('status',['waiting','calling']).order('created_at');
+  if(error){ loadError = error.message; showToast('Gagal memuat data: '+error.message); render(); return; }
+  loadError = '';
+  const loket = {};
+  LOKET.forEach(l=> loket[l.id] = {calling:null, waiting:[]});
+  tickets.forEach(t=>{
+    if(!loket[t.loket_id]) return;
+    if(t.status==='calling') loket[t.loket_id].calling = t.number;
+    else loket[t.loket_id].waiting.push(t.number);
+  });
+  const prev = data;
+  data = {loket};
+  if(prev){
+    LOKET.forEach(l=>{
+      const before = prev.loket[l.id] && prev.loket[l.id].calling;
+      const after = data.loket[l.id].calling;
+      if(after && after!==before){ speak(after, l.name); latestCall={nomor:after, loketName:l.name, loketId:l.id, ts:Date.now()}; }
+    });
+  }
+  render();
+}
+
+async function ambilNomor(id, btn){
+  const orig = btn?btn.textContent:null;
+  if(btn){ btn.disabled=true; btn.textContent='Memproses...'; }
+  try{
+    const l = LOKET.find(x=>x.id===id);
+    const { data: nomor, error } = await supabase.rpc('ptsp_ambil_nomor', {p_loket:id, p_prefix:l.prefix});
+    if(error) throw error;
+    currentTicket = {id, nomor};
+    showToast('Nomor Anda: '+nomor);
+    render();
+  }catch(err){ showToast('Gagal mengambil nomor: '+(err.message||err)); }
+  finally{ if(btn){ btn.disabled=false; btn.textContent=orig; } }
+}
+async function panggilBerikutnya(id){
+  try{ const {error} = await supabase.rpc('ptsp_panggil_berikutnya', {p_loket:id}); if(error) throw error; }
+  catch(err){ showToast('Gagal memanggil: '+(err.message||err)); }
+}
+async function selesai(id){
+  try{ const {error} = await supabase.rpc('ptsp_selesai', {p_loket:id}); if(error) throw error; }
+  catch(err){ showToast('Gagal: '+(err.message||err)); }
+}
+function ulangiPanggil(id){
+  const lk = data && data.loket[id];
+  if(lk && lk.calling) speak(lk.calling, LOKET.find(l=>l.id===id).name);
+}
+async function resetHari(){
+  if(!resetArmed){ resetArmed=true; showToast('Klik "Reset" sekali lagi dalam 5 detik untuk konfirmasi.'); setTimeout(()=>resetArmed=false,5000); return; }
+  resetArmed=false;
+  try{ const {error} = await supabase.rpc('ptsp_reset_hari'); if(error) throw error; showToast('Antrian hari ini sudah direset.'); }
+  catch(err){ showToast('Gagal reset: '+(err.message||err)); }
+}
+
+function setView(v){
+  view=v; localStorage.setItem('antrian_view', v);
+  document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('active', b.dataset.v===v));
+  render();
+}
+document.getElementById('nav').addEventListener('click', e=>{
+  const b=e.target.closest('button'); if(b) setView(b.dataset.v);
+});
+
+function render(){
+  const main = document.getElementById('main');
+  let banner = '';
+  if(loadError) banner = '<div class="banner">⚠️ '+loadError+' <button onclick="location.reload()">Muat Ulang</button></div>';
+  main.innerHTML = banner;
+  if(!data){ main.innerHTML += '<p>Memuat data...</p>'; return; }
+  const sub = document.createElement('div');
+  main.appendChild(sub);
+  if(view==='kiosk') return renderKiosk(sub);
+  if(view==='petugas') return renderPetugas(sub);
+  if(view==='display') return renderDisplay(sub);
+}
+function renderKiosk(main){
+  let html = '<div class="grid">';
+  LOKET.forEach(l=>{
+    html += '<div class="card"><h3>'+l.name+'</h3><div class="prefix">Prefix: '+l.prefix+'</div><button class="take-btn" onclick="ambilNomor(\''+l.id+'\', this)">Ambil Nomor</button></div>';
+  });
+  html += '</div><div id="ticketBox"></div>';
+  main.innerHTML = html;
+  if(currentTicket) renderTicket(currentTicket.id, currentTicket.nomor);
+}
+function renderTicket(id, nomor){
+  const box = document.getElementById('ticketBox'); if(!box) return;
+  const l = LOKET.find(x=>x.id===id);
+  const waktu = new Date().toLocaleString('id-ID', {dateStyle:'medium', timeStyle:'short'});
+  box.innerHTML =
+    '<div class="ticket"><div class="num">'+nomor+'</div><div class="loket">'+l.name+'</div>'+
+    '<div style="margin-top:10px;color:var(--muted);font-size:12px">Mohon tunggu nomor Anda dipanggil</div>'+
+    '<button class="print-btn" onclick="window.print()">🖨️ Cetak Tiket</button></div>'+
+    '<div class="print-area"><div style="text-align:center;font-size:10pt">PTSP Pengadilan Negeri Stabat</div>'+
+    '<div class="pnum">'+nomor+'</div><div class="ploket">'+l.name+'</div><div class="pfoot">'+waktu+'</div></div>';
+}
+function renderPetugas(main){
+  const lk = data.loket[petugasLoket];
+  const nextFew = lk.waiting.slice(0,3).join(', ') || '-';
+  let opts = LOKET.map(l=>'<option value="'+l.id+'"'+(l.id===petugasLoket?' selected':'')+'>'+l.name+'</option>').join('');
+  main.innerHTML =
+    '<div class="petugas-panel">'+
+    '<select onchange="petugasLoket=this.value;localStorage.setItem(\'antrian_petugas_loket\',this.value);render()">'+opts+'</select>'+
+    '<div class="calling-num">'+(lk.calling||'-')+'</div>'+
+    '<div class="waiting-count">Menunggu: '+lk.waiting.length+' | Berikutnya: '+nextFew+'</div>'+
+    '<div class="btnrow">'+
+      '<button class="btn-call" onclick="panggilBerikutnya(\''+petugasLoket+'\')">Panggil Berikutnya</button>'+
+      '<button class="btn-done" onclick="selesai(\''+petugasLoket+'\')">Selesai</button>'+
+      '<button class="btn-repeat" onclick="ulangiPanggil(\''+petugasLoket+'\')">Ulangi Panggil</button>'+
+    '</div>'+
+    '<button class="btn-reset" onclick="resetHari()">Reset Antrian Hari Ini</button>'+
+    '</div>';
+}
+function renderDisplay(main){
+  const wrap = document.createElement('div'); wrap.className='tv';
+  let html = '';
+  if(!soundUnlocked) html += '<div class="banner" style="background:#e08e0b">🔈 Suara belum aktif di perangkat ini. <button onclick="unlockSound()">Aktifkan Suara</button></div>';
+  html += '<div class="tv-header"><div class="tv-title"><h2>⚖️ PENGADILAN NEGERI STABAT</h2><p>Pelayanan Terpadu Satu Pintu</p></div><div class="tv-clock" id="clock"></div></div>';
+  if(latestCall) html += '<div class="tv-highlight"><div><div class="label">Sedang Dipanggil</div><div class="loketname">'+latestCall.loketName+'</div></div><div class="num">'+latestCall.nomor+'</div></div>';
+  html += '<div class="tv-grid">';
+  LOKET.forEach(l=>{
+    const lk = data.loket[l.id];
+    const nextFew = lk.waiting.slice(0,3).join(', ') || '-';
+    const isFresh = latestCall && latestCall.loketId===l.id && (Date.now()-latestCall.ts)<3000;
+    html += '<div class="tv-card'+(isFresh?' tv-pulse':'')+'"><h3>'+l.name.toUpperCase()+'</h3><div class="callnum'+(lk.calling?'':' empty')+'">'+(lk.calling||'MENUNGGU')+'</div><div class="next">Berikutnya: '+nextFew+'</div></div>';
+  });
+  html += '</div><div class="tv-footer">Sistem Antrian PTSP &middot; Diperbarui otomatis secara real-time</div>';
+  const parts = ['🙏 Selamat datang di PTSP Pengadilan Negeri Stabat', 'Harap tenang dan menunggu nomor Anda dipanggil'];
+  LOKET.forEach(l=>{ const w=data.loket[l.id].waiting.length; if(w>0) parts.push(l.name.toUpperCase()+': '+w+' menunggu'); });
+  const mi = parts.map(p=>'<span>'+p+'</span>').join('');
+  html += '<div class="tv-marquee"><div class="tv-marquee-track">'+mi+mi+'</div></div>';
+  wrap.innerHTML = html; main.innerHTML=''; main.appendChild(wrap);
+  updateClock();
+}
+function updateClock(){ const el=document.getElementById('clock'); if(el) el.textContent=new Date().toLocaleString('id-ID',{dateStyle:'full',timeStyle:'medium'}); }
+setInterval(()=>{ if(view==='display') updateClock(); }, 1000);
+setInterval(()=>{ if(view==='display' && latestCall) render(); }, 3200);
+
+(async function init(){
+  document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('active', b.dataset.v===view));
+  render();
+  await fetchState();
+  supabase.channel('ptsp-tickets-changes')
+    .on('postgres_changes', {event:'*', schema:'public', table:'ptsp_tickets'}, fetchState)
+    .subscribe();
+  setInterval(fetchState, 15000); // jaring pengaman kalau realtime terlewat
+})();
+</script>
+</body>
+</html>
